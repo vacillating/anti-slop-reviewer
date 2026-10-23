@@ -69,8 +69,16 @@ export default function ReviewPanel(props: Props) {
       <header className="border-b border-hairline-soft px-10 pb-4 pt-6">
         <h2 className="font-serif text-[22px] text-ink">Review</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Overall score: <span className="tabular-nums text-ink">{props.initialScore ?? "–"}</span> before the discussion,{" "}
-          <span className="tabular-nums text-ink">{props.finalScore ?? "–"}</span> after.
+          {props.initialScore !== null ? (
+            <>
+              Overall score: <span className="tabular-nums text-ink">{props.initialScore}</span> before the discussion,{" "}
+              <span className="tabular-nums text-ink">{props.finalScore ?? "–"}</span> after.
+            </>
+          ) : (
+            <>
+              Overall score: <span className="tabular-nums text-ink">{props.finalScore ?? "–"}</span>.
+            </>
+          )}
         </p>
       </header>
 

@@ -5,6 +5,7 @@ export interface SessionSnapshot {
   paperName: string;
   numPages: number;
   startedAt: string;
+  studyMode: boolean;
   initialScore: number | null;
   firstImpression: string;
   finalScore: number | null;
@@ -12,7 +13,7 @@ export interface SessionSnapshot {
   review: ReviewDraft | null;
 }
 
-/** Builds the export JSON: every turn, both scores, and the review with AI edits marked. */
+/** Builds the export JSON: every turn, the scores, and the review with AI edits marked. */
 export function buildExport(s: SessionSnapshot) {
   return {
     app: "Review Copilot",
@@ -20,12 +21,17 @@ export function buildExport(s: SessionSnapshot) {
     exportedAt: new Date().toISOString(),
     paper: { name: s.paperName, numPages: s.numPages },
     startedAt: s.startedAt,
-    scores: {
-      scale: "1-5, half points",
-      initial: s.initialScore,
-      final: s.finalScore,
-    },
-    firstImpression: s.firstImpression,
+    studyMode: s.studyMode,
+    // The before/after comparison is part of the export only in study mode.
+    scores: s.studyMode
+      ? {
+          scale: "1-5, half points",
+          initial: s.initialScore,
+          final: s.finalScore,
+          change: s.initialScore !== null && s.finalScore !== null ? s.finalScore - s.initialScore : null,
+        }
+      : { scale: "1-5, half points", final: s.finalScore },
+    ...(s.studyMode && { firstImpression: s.firstImpression }),
     turns: s.turns.map((t) => ({
       id: t.id,
       speaker: t.speaker,

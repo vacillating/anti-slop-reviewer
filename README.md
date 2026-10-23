@@ -21,8 +21,10 @@ Click **"Or use the sample paper"** on the start screen to try it with BERT (arX
 
 ## The flow
 
-1. **Start**: upload a PDF (or use the sample). Before any AI content, the reviewer records an overall score
-   (1–5, half points) and a one-line first impression. Neither is ever sent to the LLM.
+1. **Start**: upload a PDF (or use the sample). By default the walkthrough starts right away.
+   With **Study mode** on (small toggle at the top right, off by default; it can only be changed before the
+   walkthrough starts), the reviewer must first record an overall score (1–5, half points) and a one-line first
+   impression, before any AI content. Neither is ever sent to the LLM.
 2. **Discussion**, for each review-form section (Summary · Soundness · Novelty · Clarity · Overall):
    - *This part says*: a plain-language walkthrough in the paper's order; cited passages are highlighted in the PDF.
    - *Your take*: one open question.
@@ -32,12 +34,13 @@ Click **"Or use the sample paper"** on the start screen to try it with BERT (arX
    - Buttons: **Show source** (cycles through the cited passages), **Simpler**, **Define a term**, **Next part**.
    - Select text in the PDF to get an **Ask about this** button.
    - Each discussed passage leaves a small mark in the page margin. Click it to see that exchange again.
-3. **Final score** on the same scale; both scores are recorded.
+3. **Final score** on the same scale (in study mode, both scores are recorded).
 4. **Review**: the reviewer's messages, grammar-fixed only, grouped by section. Changed words are underlined in the
    accent color; click one to restore the original wording. Hover a sentence to see the message it came from and the
    paper passage it refers to; double-click (or "Edit sentence") to edit it.
 5. **Export session** (top right, any time): a JSON file with every turn (speaker, type, section, text, citations,
-   timestamps), both scores, and the review with every AI edit listed.
+   timestamps), the final score, and the review with every AI edit listed. In study mode it also has the first
+   impression and the before/after comparison (`scores.initial`, `scores.final`, `scores.change`).
 
 ## Where things live
 

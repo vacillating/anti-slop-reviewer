@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 export const SAMPLE_PDF = "/samples/bert-1810.04805.pdf";
 
-export default function StartScreen({ onFile }: { onFile(file: File | string, name: string): void }) {
+export default function StartScreen({ onFile, topRight }: { onFile(file: File | string, name: string): void; topRight?: ReactNode }) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -13,7 +13,8 @@ export default function StartScreen({ onFile }: { onFile(file: File | string, na
   };
 
   return (
-    <main className="flex min-h-full items-center justify-center px-6 py-16">
+    <main className="relative flex min-h-full items-center justify-center px-6 py-16">
+      {topRight && <div className="absolute right-5 top-3">{topRight}</div>}
       <div className="w-full max-w-xl">
         <p className="label mb-6">Review Copilot</p>
         <h1 className="font-serif text-4xl leading-tight text-ink">Read the paper. Form your own view.</h1>

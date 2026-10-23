@@ -7,6 +7,7 @@ import ProgressBar from "./ProgressBar";
 import ReviewPanel from "./ReviewPanel";
 import ScoreForm from "./ScoreForm";
 import StartScreen from "./StartScreen";
+import StudyToggle from "./StudyToggle";
 import { askCopilot, polishReview } from "@/lib/api";
 import { diffWords } from "@/lib/diff";
 import { buildExport, downloadJson } from "@/lib/export";
@@ -35,6 +36,9 @@ function selectionCitation(sel: { page: number; text: string }): Citation {
 
 export default function ReviewCopilot() {
   const [phase, setPhase] = useState<Phase>("start");
+  // Study mode: the before-score step is required and the export carries the before/after comparison.
+  // Off (default): the before step is skipped entirely.
+  const [studyMode, setStudyMode] = useState(false);
   const [file, setFile] = useState<File | string | null>(null);
   const [paperName, setPaperName] = useState("");
   const [pages, setPages] = useState<string[] | null>(null);
@@ -65,6 +69,7 @@ export default function ReviewCopilot() {
 
   const viewer = useRef<PdfViewerHandle>(null);
   const prefetch = useRef<Promise<CopilotTurn> | null>(null);
+  const walkthroughStarted = useRef(false);
 
   const section = SECTIONS[sectionIdx].id;
   const turnsById = useMemo(() => new Map(turns.map((t) => [t.id, t])), [turns]);
@@ -148,6 +153,15 @@ export default function ReviewCopilot() {
     }
   }, [phase, pages]);
 
+  // Start the first walkthrough once the discussion begins and the paper text is ready
+  // (without study mode, the discussion begins right after upload, before extraction finishes).
+  useEffect(() => {
+    if (phase === "discuss" && pages && !walkthroughStarted.current) {
+      walkthroughStarted.current = true;
+      void runWalkthrough("summary");
+    }
+  });
+
   async function respondTo(
     req: Omit<CopilotRequest, "pages" | "history">,
     pendingText: string,
@@ -171,7 +185,13 @@ export default function ReviewCopilot() {
   const handleFile = (f: File | string, name: string) => {
     setFile(f);
     setPaperName(name);
-    setPhase("initial");
+    setPhase(studyMode ? "initial" : "discuss");
+  };
+
+  const changeStudyMode = (on: boolean) => {
+    setStudyMode(on);
+    // Turning study mode off on the before step skips it.
+    if (!on && phase === "initial") setPhase("discuss");
   };
 
   const handleText = useCallback((p: string[]) => setPages(p), []);
@@ -181,7 +201,6 @@ export default function ReviewCopilot() {
     setFirstImpression(impression);
     addTurn({ speaker: "reviewer", type: "initial_impression", text: impression, citations: [], section: null });
     setPhase("discuss");
-    void runWalkthrough("summary");
   };
 
   const sendReply = (raw: string) => {
@@ -310,6 +329,7 @@ export default function ReviewCopilot() {
       paperName,
       numPages: pages?.length ?? 0,
       startedAt,
+      studyMode,
       initialScore,
       firstImpression,
       finalScore,
@@ -322,7 +342,11 @@ export default function ReviewCopilot() {
 
   // ---- render ------------------------------------------------------------------
 
-  if (phase === "start" || !file) return <StartScreen onFile={handleFile} />;
+  const studyToggle = (
+    <StudyToggle on={studyMode} onChange={changeStudyMode} disabled={phase !== "start" && phase !== "initial"} />
+  );
+
+  if (phase === "start" || !file) return <StartScreen onFile={handleFile} topRight={studyToggle} />;
 
   const sectionTurns = turns.filter((t) => t.section === section && t.type !== "initial_impression");
   const pastTurns = (() => {
@@ -346,12 +370,15 @@ export default function ReviewCopilot() {
           <span className="truncate text-xs text-muted">{paperName}</span>
         </div>
         <ProgressBar current={progressCurrent} finished={allDone ? new Set(SECTIONS.map((s) => s.id)) : finished} />
-        <button
-          onClick={exportSession}
-          className="rounded-sm border border-hairline px-3 py-1 text-[13px] text-ink-soft hover:border-muted hover:text-ink"
-        >
-          Export session
-        </button>
+        <div className="flex items-center gap-4">
+          {studyToggle}
+          <button
+            onClick={exportSession}
+            className="rounded-sm border border-hairline px-3 py-1 text-[13px] text-ink-soft hover:border-muted hover:text-ink"
+          >
+            Export session
+          </button>
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -404,7 +431,7 @@ export default function ReviewCopilot() {
                 const t = lastCopilotTurn(true);
                 if (t) void highlightTurn(t);
               }}
-              pending={pending}
+              pending={pending ?? (pages ? null : "Opening the paper")}
               error={error}
               onRetry={() => retryRef.current?.()}
               focusTurnId={focus?.turnId ?? null}
@@ -430,7 +457,11 @@ export default function ReviewCopilot() {
             <div className="quiet-scroll h-full overflow-y-auto px-10 py-10">
               <ScoreForm
                 title="Your final score"
-                intro="You have been through every part. Where do you land now? Use the same scale as before."
+                intro={
+                  studyMode
+                    ? "You have been through every part. Where do you land now? Use the same scale as before."
+                    : "You have been through every part. Where do you land?"
+                }
                 submitLabel="Write up my review"
                 onSubmit={finishScores}
               />

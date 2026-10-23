@@ -33,3 +33,8 @@ One line per judgment call made while building overnight.
 - Once the reviewer hand-edits a sentence, its AI marks are dropped and it is shown as their text (export keeps original, AI polish and final).
 - The review provenance popover's "Refers to" passage: the reviewer's selection if any, else the first quote of the copilot's reply to that message, else the most recent cited passage before it.
 - Export is triggered client-side (Blob download) and available at any phase.
+- Study mode (added later): no "Skip" link. With study mode off the before step is skipped entirely, and with it on the step is required, so a Skip link could never appear (confirmed with the user).
+- The study-mode toggle is also shown at the top right of the start screen: the app's top bar only exists after upload, and the toggle must be set before upload to affect the before step.
+- The toggle locks once the walkthrough starts (a before score can't be collected after AI content). Switching it off while on the before step skips straight to the walkthrough.
+- The final score step is kept in both modes. Without study mode, the export holds only `scores.final` (no first impression, no comparison), and the review header shows a single score.
+- Without study mode the walkthrough starts right after upload; the card shows "Opening the paper…" until text extraction finishes.
