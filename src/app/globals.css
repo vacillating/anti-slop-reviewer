@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Journal palette: warm paper neutrals, hairlines, one oxblood accent. */
+@theme {
+  --color-desk: #ece7dd;
+  --color-paper: #faf8f3;
+  --color-sheet: #fffefb;
+  --color-ink: #2b2722;
+  --color-ink-soft: #5d554b;
+  --color-muted: #8a8174;
+  --color-hairline: #ddd5c7;
+  --color-hairline-soft: #e9e3d8;
+  --color-accent: #8c3b2a;
+  --color-accent-soft: #f3e6e1;
+  --color-mark: rgba(255, 214, 92, 0.42);
+  --color-mark-strong: rgba(255, 200, 60, 0.6);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-reading), Georgia, serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-desk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgba(140, 59, 42, 0.18);
+}
+
+/* Small caps labels used for card section headings. */
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+/* Thin, quiet scrollbars. */
+.quiet-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cfc6b6 transparent;
+}
+
+/* react-pdf text layer: keep selection visible over the canvas. */
+.react-pdf__Page .textLayer ::selection {
+  background: rgba(140, 59, 42, 0.25);
+}
+
+@keyframes mark-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.pdf-mark {
+  animation: mark-in 500ms ease-out;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 280ms ease-out both;
 }

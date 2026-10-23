@@ -1,12 +1,16 @@
 {
-  "name": "rc",
+  "name": "review-copilot",
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "node scripts/copy-pdf-assets.mjs",
+    "predev": "node scripts/copy-pdf-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-pdf-assets.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "extract-text": "node scripts/extract-text.mjs"
   },
   "dependencies": {
     "next": "16.4.2",
