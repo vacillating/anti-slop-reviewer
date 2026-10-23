@@ -76,8 +76,11 @@ export default function ReviewCopilot() {
     return turn;
   }, []);
 
+  // The first impression stays out of the copilot's context so it cannot anchor on it.
   const history = () =>
-    turnsRef.current.map(({ speaker, type, section, text }) => ({ speaker, type, section, text }));
+    turnsRef.current
+      .filter((t) => t.type !== "initial_impression")
+      .map(({ speaker, type, section, text }) => ({ speaker, type, section, text }));
 
   /** Calls the copilot; on failure shows the error in the card with a retry. */
   const call = useCallback(

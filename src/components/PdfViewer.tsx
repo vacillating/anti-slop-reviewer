@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
+import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -114,6 +114,33 @@ function locateInPage(pageEl: HTMLElement, quote: string): { rects: Rect[]; qual
   return rects.length ? { rects, quality: m.quality } : null;
 }
 
+/**
+ * One rendered page. Memoized with stable props so that highlight, marker and
+ * selection state changes do not re-render the text layer (which would wipe the
+ * reviewer's text selection).
+ */
+const PdfPage = memo(function PdfPage({
+  pageNumber,
+  width,
+  onTextLayerReady,
+}: {
+  pageNumber: number;
+  width: number;
+  onTextLayerReady(page: number): void;
+}) {
+  return (
+    <Page
+      pageNumber={pageNumber}
+      width={width}
+      suspense={false}
+      renderTextLayer
+      renderAnnotationLayer
+      onRenderTextLayerSuccess={() => onTextLayerReady(pageNumber)}
+      loading={<div style={{ height: width * 1.294 }} />}
+    />
+  );
+});
+
 export default function PdfViewer({ file, onTextExtracted, markers, activeMarkerId, onMarkerClick, onAskAbout, ref }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageEls = useRef(new Map<number, HTMLDivElement>());
@@ -152,6 +179,8 @@ export default function PdfViewer({ file, onTextExtracted, markers, activeMarker
     },
     [onTextExtracted],
   );
+
+  const markReady = useCallback((page: number) => readyPages.current.add(page), []);
 
   const waitForPage = useCallback(async (page: number, timeoutMs = 5000) => {
     const start = performance.now();
@@ -269,15 +298,7 @@ export default function PdfViewer({ file, onTextExtracted, markers, activeMarker
             className="relative mx-auto mb-6 bg-white shadow-[0_1px_3px_rgba(60,45,30,0.12),0_0_0_1px_rgba(60,45,30,0.05)]"
             style={{ width }}
           >
-            <Page
-              pageNumber={n}
-              width={width}
-              suspense={false}
-              renderTextLayer
-              renderAnnotationLayer
-              onRenderTextLayerSuccess={() => readyPages.current.add(n)}
-              loading={<div style={{ height: width * 1.294 }} />}
-            />
+            <PdfPage pageNumber={n} width={width} onTextLayerReady={markReady} />
             {/* Highlight overlay, positioned in page-relative fractions so it survives resizes. */}
             <div className="pointer-events-none absolute inset-0 z-[3] mix-blend-multiply">
               {(highlights.get(n) ?? []).map((r, i) => (
