@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "extract-text": "node scripts/extract-text.mjs"
+    "extract-text": "node scripts/extract-text.mjs",
+    "test:api": "node scripts/test-api.mjs samples/bert-1810.04805.pages.json",
+    "test:retry": "node --conditions=react-server --no-warnings scripts/test-json-retry.mts"
   },
   "dependencies": {
     "next": "16.4.2",

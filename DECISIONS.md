@@ -12,3 +12,24 @@ One line per judgment call made while building overnight.
 - The reviewer's scores and first impression are never sent to the LLM, so the copilot cannot anchor on them.
 - Walkthrough and "Your take" are two separate LLM calls (keeps the one-turn JSON format from the spec); the question loads right after the walkthrough appears.
 - "Next part" advances to the next review-form section (no sub-steps inside a section).
+- Fonts: Source Serif 4 (copilot text, review) + Source Sans 3 (UI chrome) via next/font; palette is warm paper neutrals with one oxblood accent (#8c3b2a); light theme only (journal look).
+- Card labels instead of chat bubbles: "This part says", "Your take", "You wrote", "From the paper", "A factual check", "That call is yours". Older blocks fade so only the latest exchange is in focus.
+- The PDF column is 60% during discussion, 55% on the review page (the review needs a bit more width).
+- After upload, the PDF is already visible on the left while the initial score form sits in the card, so the reviewer can read before scoring.
+- The first walkthrough is prefetched while the reviewer fills in the initial score; it is not shown until they submit.
+- The first-impression turn is filtered out of the history sent to the copilot (found in testing: the copilot quoted it back).
+- pdf.js worker, standard fonts and cMaps are copied into public/pdfjs on install/dev/build (scripts/copy-pdf-assets.mjs) instead of relying on bundler `new URL(..., import.meta.url)`; they are git-ignored.
+- PDF pages are memoized with stable props: any state change otherwise re-rendered the text layer and wiped the reviewer's selection.
+- Highlights are drawn as an overlay of rects (stored as fractions of the page box) computed from a DOM Range over the text layer, rather than by editing text-layer spans; they survive resizes.
+- Fallback order for a citation: exact normalized match on the cited page → fuzzy (head/tail anchors, then longest matching word run) → same on neighbouring pages, then all pages → scroll to the cited page with "(page only)" shown next to the quote.
+- "Ask about this" attaches the selection to the composer instead of sending immediately, so the reviewer can type a question; sending it empty asks for a walkthrough of the passage.
+- "Show source" cycles through the latest cited turn's quotes; clicking any quote in the card jumps to it.
+- "Simpler" restates the latest copilot turn of the section; "Define a term" opens a small inline input.
+- "Next part" is allowed even if the reviewer wrote nothing for a section (the review then says "Nothing recorded for this part").
+- The final score form does not show the initial score while choosing, to avoid anchoring; both are shown on the review page.
+- The review uses only discussion replies (not the first impression). Messages that are only questions, or that the copilot answered as a factual question or declined as a verdict request, are left out.
+- AI edits are computed by a deterministic word diff (original vs polished), not by asking the model to mark them, so every change is shown.
+- A polish that changes more than 50% of words (80% for fragments under 8 words) is discarded and the original kept; a model "original" span that can't be found in the message is dropped, and any message left uncovered is added verbatim.
+- Once the reviewer hand-edits a sentence, its AI marks are dropped and it is shown as their text (export keeps original, AI polish and final).
+- The review provenance popover's "Refers to" passage: the reviewer's selection if any, else the first quote of the copilot's reply to that message, else the most recent cited passage before it.
+- Export is triggered client-side (Blob download) and available at any phase.
