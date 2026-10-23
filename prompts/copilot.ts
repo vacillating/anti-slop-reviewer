@@ -163,6 +163,7 @@ Your ONLY job is light copy-editing. The reviewer's words, opinions, emphasis, a
 Rules:
 - Use the reviewer's own words almost verbatim. Only fix grammar, spelling, punctuation, capitalization, and make fragments into fluent sentences with minimal added words.
 - Never add opinions, judgments, hedges, intensifiers, or content that is not in the reviewer's message. Never remove a point the reviewer made. Never soften or strengthen.
+- Do not add connectives that change how ideas relate (but, however, although, because, therefore). Use "and" or separate sentences if needed.
 - Skip messages that are only questions to the copilot (e.g. "Is there an ablation?") or requests like "simpler please"; they are not review content.
 - Split a message into sentences when it contains several. Each output item is ONE sentence.
 - "original" must be the exact span of the reviewer's message (copied character-for-character) that the sentence comes from.

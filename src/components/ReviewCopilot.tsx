@@ -257,7 +257,7 @@ export default function ReviewCopilot() {
     const all = turnsRef.current;
     const i = all.findIndex((t) => t.id === turn.id);
     const reply = all.slice(i + 1).find((t) => t.speaker === "copilot");
-    if (reply && (reply.type === "answer" || reply.type === "fact_correction") && reply.citations[0]) return reply.citations[0];
+    if (reply?.citations[0]) return reply.citations[0];
     return [...all.slice(0, i)].reverse().find((t) => t.speaker === "copilot" && t.citations.length > 0)?.citations[0];
   };
 

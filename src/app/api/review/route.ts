@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { chatJson } from "@/lib/llm";
 import { changeRatio } from "@/lib/diff";
+import { findQuote, normalizeWithMap } from "@/lib/textMatch";
 import type { ReviewRequestMessage, SectionId } from "@/lib/types";
 import { REVIEW_POLISH_PROMPT } from "../../../../prompts/copilot";
 
@@ -17,6 +18,29 @@ interface PolishedSentence {
 }
 
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
+
+/** Messages that only ask the copilot something are not review content. */
+function isOnlyQuestion(m: ReviewRequestMessage): boolean {
+  if (m.copilotResponseType === "answer" || m.copilotResponseType === "decline") return true;
+  const sentences = m.text.split(/(?<=[.!?])\s+/).filter((x) => x.trim());
+  return sentences.length > 0 && sentences.every((x) => x.trim().endsWith("?"));
+}
+
+/**
+ * Finds the model's "original" span in the reviewer's message, tolerating case and
+ * punctuation differences, and returns the exact text from the message.
+ */
+function locateOriginal(message: string, original: string): string | null {
+  const msg = squash(message);
+  if (original && msg.includes(original)) return original;
+  const { norm, map } = normalizeWithMap(msg);
+  const m = findQuote(norm, original);
+  if (!m || m.quality !== "exact") return null;
+  let end = map[m.end - 1] + 1;
+  // Keep trailing punctuation that belongs to the sentence.
+  while (end < msg.length && /[.,;:!?)"'”’]/.test(msg[end])) end++;
+  return msg.slice(map[m.start], end);
+}
 
 function validate(value: unknown): PolishedSentence[] {
   const v = value as { sentences?: unknown };
@@ -45,7 +69,7 @@ export async function POST(request: Request) {
     const items = messages.filter((m) => m.section === section);
     const lines = items.map(
       (m) =>
-        `- id=${m.id}${m.copilotResponseType === "answer" ? " (the copilot treated this as a factual question)" : ""}: ${JSON.stringify(m.text)}`,
+        `- id=${m.id}${isOnlyQuestion(m) ? " (a question to the copilot, not review content)" : ""}: ${JSON.stringify(m.text)}`,
     );
     return `## ${section}\n${lines.length ? lines.join("\n") : "(no messages)"}`;
   }).join("\n\n");
@@ -64,13 +88,11 @@ export async function POST(request: Request) {
     for (const s of value) {
       const msg = byId.get(s.sourceId);
       if (!msg) continue;
-      let original = squash(s.original);
+      // The "original" must really be the reviewer's words; otherwise drop the sentence
+      // (an uncovered message is added back verbatim below).
+      const original = locateOriginal(msg.text, squash(s.original));
+      if (!original) continue;
       let polished = squash(s.polished);
-      // The "original" must really be the reviewer's words; otherwise keep the message as written.
-      if (!squash(msg.text).includes(original) || !original) {
-        original = squash(msg.text);
-        polished = original;
-      }
       const limit = original.split(" ").length < 8 ? 0.8 : MAX_CHANGE_RATIO;
       if (changeRatio(original, polished) > limit) polished = original;
       out.push({ section: msg.section, sourceId: msg.id, original, polished });
@@ -79,7 +101,7 @@ export async function POST(request: Request) {
     // Never drop a reviewer statement silently: add uncovered ones verbatim.
     for (const m of messages) {
       const covered = out.some((s) => s.sourceId === m.id);
-      if (!covered && m.copilotResponseType !== "answer" && m.text.trim()) {
+      if (!covered && !isOnlyQuestion(m) && m.text.trim()) {
         const text = squash(m.text);
         out.push({ section: m.section, sourceId: m.id, original: text, polished: text });
       }
