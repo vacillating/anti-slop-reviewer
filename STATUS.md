@@ -3,7 +3,8 @@
 ## What works (tested end to end in Chrome with the sample BERT paper)
 
 - `npm run build` passes (clean `.next`), `npm run lint` is clean, and `npm run dev` starts without errors.
-- Upload a PDF or use the bundled sample → initial score (1–5, half points) + first impression, before any AI content.
+- Upload a PDF or use the bundled sample → straight to the walkthrough; with Study mode on, an initial score (1–5,
+  half points) + first impression is required first, before any AI content (checked in both modes).
 - All five sections run the loop: walkthrough with highlighted sources → open question → reviewer reply.
   Observed in the UI: factual question → "answer" with quote; wrong fact ("only Wikipedia") → "fact_correction" quoting
   BooksCorpus + Wikipedia; "Is this good enough to accept?" → "decline" + open question; opinions → open follow-up.
