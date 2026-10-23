@@ -1,37 +1,75 @@
 import "server-only";
 
-// Thin DeepSeek (OpenAI-compatible) client. Server-side only: the API key never
-// reaches the browser.
+// Thin client for any OpenAI-compatible chat API (DeepSeek by default).
+// Server-side only: the API key never reaches the browser.
+//
+// Configured in .env.local (see .env.example):
+//   LLM_BASE_URL  default https://api.deepseek.com
+//   LLM_MODEL     default deepseek-chat
+//   LLM_API_KEY   falls back to DEEPSEEK_API_KEY
 
-const BASE_URL = "https://api.deepseek.com";
-const MODEL = "deepseek-chat";
+const DEFAULT_BASE_URL = "https://api.deepseek.com";
+const DEFAULT_MODEL = "deepseek-chat";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-async function chatOnce(messages: ChatMessage[], temperature: number): Promise<string> {
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) throw new Error("DEEPSEEK_API_KEY is not set (see .env.local)");
+class LlmHttpError extends Error {
+  readonly status: number;
+  constructor(status: number, body: string) {
+    super(`LLM ${status}: ${body.slice(0, 300)}`);
+    this.status = status;
+  }
+}
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+function config() {
+  const apiKey = process.env.LLM_API_KEY || process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error("LLM_API_KEY (or DEEPSEEK_API_KEY) is not set (see .env.example)");
+  return {
+    baseUrl: (process.env.LLM_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    model: process.env.LLM_MODEL || DEFAULT_MODEL,
+    apiKey,
+  };
+}
+
+// Set once a provider rejects response_format, so later calls skip it.
+let jsonModeUnsupported = false;
+
+function rejectsJsonMode(err: LlmHttpError) {
+  return err.status >= 400 && err.status < 500 && err.status !== 429 && /response_format|json_object|json mode/i.test(err.message);
+}
+
+async function post(messages: ChatMessage[], temperature: number, jsonMode: boolean): Promise<string> {
+  const { baseUrl, model, apiKey } = config();
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages,
       temperature,
       max_tokens: 2000,
-      response_format: { type: "json_object" },
+      ...(jsonMode && { response_format: { type: "json_object" } }),
     }),
     signal: AbortSignal.timeout(60_000),
   });
-  if (!res.ok) {
-    throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  }
+  if (!res.ok) throw new LlmHttpError(res.status, await res.text());
   const data = await res.json();
   return data?.choices?.[0]?.message?.content ?? "";
+}
+
+async function chatOnce(messages: ChatMessage[], temperature: number): Promise<string> {
+  if (jsonModeUnsupported) return post(messages, temperature, false);
+  try {
+    return await post(messages, temperature, true);
+  } catch (err) {
+    if (!(err instanceof LlmHttpError && rejectsJsonMode(err))) throw err;
+    console.warn("[llm] provider rejected response_format json_object; retrying without it");
+    jsonModeUnsupported = true;
+    return post(messages, temperature, false);
+  }
 }
 
 /** Parses model output as JSON, tolerating code fences and leading/trailing prose. */
@@ -66,7 +104,7 @@ export async function chatJson<T>(
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
       console.warn(`[llm] attempt ${i} failed: ${lastError}`);
-      if (lastError.startsWith("DeepSeek 4") && !lastError.startsWith("DeepSeek 429")) break;
+      if (err instanceof LlmHttpError && err.status >= 400 && err.status < 500 && err.status !== 429) break;
       convo = [
         ...messages,
         ...(raw ? [{ role: "assistant" as const, content: raw }] : []),

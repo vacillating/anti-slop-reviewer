@@ -7,13 +7,25 @@ review from the reviewer's **own words**, marking every word it changed.
 
 ## Setup
 
-Requirements: Node.js 20+ and a DeepSeek API key.
+Requirements: Node.js 20+ and an API key for an OpenAI-compatible chat API (DeepSeek by default).
 
 ```bash
 npm install                 # also copies the pdf.js worker/fonts into public/pdfjs
-echo "DEEPSEEK_API_KEY=sk-..." > .env.local   # skip if .env.local already exists
+cp .env.example .env.local  # then set LLM_API_KEY (skip if .env.local already exists)
 npm run dev                 # http://localhost:3000
 ```
+
+The LLM is configured in `.env.local`:
+
+| Variable | Default | |
+| --- | --- | --- |
+| `LLM_BASE_URL` | `https://api.deepseek.com` | Any OpenAI-compatible endpoint, e.g. `https://api.openai.com/v1`. |
+| `LLM_MODEL` | `deepseek-chat` | e.g. `gpt-4o-mini` for OpenAI. |
+| `LLM_API_KEY` | – | Falls back to `DEEPSEEK_API_KEY`, so older `.env.local` files keep working. |
+
+`.env.example` has commented examples for DeepSeek and OpenAI. Calls request `response_format: json_object`; if the
+provider rejects it, the call is retried without it (and later calls skip it). The prompts ask for JSON either way,
+and the output is validated and retried. Restart `npm run dev` after changing `.env.local`.
 
 Production build: `npm run build && npm start`.
 
@@ -49,14 +61,14 @@ Click **"Or use the sample paper"** on the start screen to try it with BERT (arX
 | `prompts/copilot.ts` | **All prompt text**: the copilot system prompt, per-section focus, per-action instructions, banned phrases, review polish prompt. Iterate here. |
 | `src/app/api/copilot/route.ts` | Copilot endpoint: builds the prompt, validates the JSON turn, verifies quotes against the paper, regenerates once on bad quotes or banned phrasing. |
 | `src/app/api/review/route.ts` | Review endpoint: light copy-editing of the reviewer's messages, with guards (original span must be in the message, too much rewording is rejected). |
-| `src/lib/llm.ts` | DeepSeek client (server-only): loose JSON parsing plus validation and retry (3 attempts). |
+| `src/lib/llm.ts` | OpenAI-compatible LLM client (server-only, configured by env): loose JSON parsing plus validation and retry (3 attempts), JSON-mode fallback. |
 | `src/lib/textMatch.ts` | Quote matching (normalized exact match, then fuzzy) used by both server verification and PDF highlighting. |
 | `src/lib/diff.ts` | Word diff that produces the revertible "AI edit" marks. |
 | `src/components/PdfViewer.tsx` | react-pdf viewer with text layer, highlight overlay, margin markers, "Ask about this". |
 | `src/components/ReviewCopilot.tsx` | Session state and flow (in memory only). |
 
-The LLM is DeepSeek (`deepseek-chat`, OpenAI-compatible API at `https://api.deepseek.com`), called only from the
-server routes. The API key never reaches the browser.
+The LLM (DeepSeek `deepseek-chat` unless `.env.local` says otherwise) is called only from the server routes. The API
+key never reaches the browser.
 
 ## Scripts
 

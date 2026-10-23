@@ -38,3 +38,6 @@ One line per judgment call made while building overnight.
 - The toggle locks once the walkthrough starts (a before score can't be collected after AI content). Switching it off while on the before step skips straight to the walkthrough.
 - The final score step is kept in both modes. Without study mode, the export holds only `scores.final` (no first impression, no comparison), and the review header shows a single score.
 - Without study mode the walkthrough starts right after upload; the card shows "Opening the paper…" until text extraction finishes.
+- LLM provider comes from env (`LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`), defaulting to DeepSeek; `DEEPSEEK_API_KEY` is the key fallback. Read per call, so tests can set env after import.
+- JSON-mode fallback triggers only on a 4xx (not 429) whose body mentions response_format/json_object/json mode; it is remembered per server process, so a rejecting provider costs one extra request once.
+- `.env.example` is committed (un-ignored in .gitignore); `.env.local` stays ignored.
